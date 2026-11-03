@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PAINK · 周怀夜私人账目</title>
+<style>
+    :root {
+        --bg-base: #08090d;
+        --bg-card: #111318;
+        --bg-elevated: #181b22;
+        --gold: #b8a888;
+        --gold-bright: #e0d0a8;
+        --red-accent: #8a1f2b;
+        --red-bright: #c93a4a;
+        --cyan-dim: #4a6a72;
+        --text-main: #dde0e6;
+        --text-dim: #7d8494;
+        --border-dim: #22262e;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(900px 600px at 50% -15%, rgba(184,168,136,0.07), transparent 70%),
+            radial-gradient(700px 500px at 110% 105%, rgba(138,31,43,0.12), transparent 70%),
+            linear-gradient(rgba(74,106,114,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(74,106,114,0.03) 1px, transparent 1px);
+        background-size: auto, auto, 40px 40px, 40px 40px;
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 2px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--cyan-dim), transparent); }
+    .gate-box::after { content: 'PAINK MEDICAL · CONFIDENTIAL'; position: absolute; bottom: 8px; right: 12px; font-size: 9px; color: #2a2e38; letter-spacing: 2px; }
+
+    .seal-logo { width: 64px; height: 64px; margin: 0 auto 14px; border: 1px solid var(--gold); border-radius: 2px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 22px; font-weight: bold; letter-spacing: 1px; box-shadow: 0 0 24px rgba(184,168,136,0.18) inset; font-family: Georgia, serif; transform: rotate(45deg); }
+    .seal-logo span { transform: rotate(-45deg); display: block; }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 26px; }
+
+    .gq { font-size: 12px; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; letter-spacing: 1px; }
+    .gq::before { content: ''; width: 3px; height: 13px; background: var(--gold); display: block; }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 2px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(184,168,136,0.09); border-color: var(--gold); color: var(--gold-bright); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--gold); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--gold-bright); line-height: 2; padding: 16px; border-left: 2px solid var(--red-bright); background: rgba(138,31,43,0.06); margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px solid var(--red-bright); color: var(--red-bright); padding: 5px 15px; font-size: 13px; font-weight: bold; letter-spacing: 2px; transform: rotate(-4deg); margin-bottom: 18px; opacity: 0; }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: rotate(-16deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-4deg) scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 12px; font-size: 15px; letter-spacing: 5px; border-radius: 2px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { background: rgba(184,168,136,0.1); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(8,9,13,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1px solid var(--gold); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 9px; border-radius: 2px; line-height: 1.1; text-align: center; font-family: Georgia, serif; }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--cyan-dim); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; }
+    .pill.on { border-color: var(--gold); color: var(--gold); background: rgba(184,168,136,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 2px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--gold-bright); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(184,168,136,0.25); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; }
+    .total-num:active { text-shadow: 0 0 32px rgba(184,168,136,0.8); }
+    .total-meta { font-size: 12px; color: var(--cyan-dim); margin-top: 5px; }
+    .total-note { font-size: 12px; color: var(--red-bright); margin-top: 10px; min-height: 18px; line-height: 1.7; }
+
+    .chart-row { margin-bottom: 10px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--gold-bright); font-family: Georgia, serif; }
+    .chart-track { height: 5px; background: var(--bg-elevated); border-radius: 1px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, #5a5040, var(--gold)); transition: width 0.1s linear; }
+
+    .asset-cat { margin-bottom: 4px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--gold); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--gold-bright); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--gold-bright); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1px solid var(--gold); color: var(--gold); padding: 8px 24px; border-radius: 2px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; }
+    .gold-btn:active { background: rgba(184,168,136,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--gold); }
+    .pitem-head::before { content: '›'; color: var(--gold); margin-right: 8px; font-size: 16px; }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--cyan-dim); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 2px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--gold); color: var(--gold-bright); }
+    .pres { font-size: 13px; color: var(--gold-bright); padding: 11px 12px; border: 1px solid rgba(184,168,136,0.3); background: rgba(184,168,136,0.05); border-radius: 2px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-elevated); border: 1px solid var(--gold); border-radius: 3px; padding: 15px; box-shadow: 0 -5px 30px rgba(0,0,0,0.85); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--gold); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-base); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 2px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--gold); color: var(--gold-bright); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--gold); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(17,19,24,0.96); border: 1px solid var(--gold); color: var(--gold-bright); padding: 9px 16px; border-radius: 3px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo"><span>夜</span></div>
+        <div class="gate-title">P A I N K · 私 人 账 目 审 计</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">仅限持密钥者查阅 · 其余后果自负</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">PAINK<br>CEO</div>
+            <div>
+                <div class="h-title">周怀夜 · 私人账目</div>
+                <div class="h-sub" id="permLabel">权限：……他给的</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">可量化资产总和</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">资产配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">资产明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">不可量化项</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">周 怀 夜</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: 'PAINK · 医药科技集团',
+            short: 'PAINK集团',
+            items: [
+                { n: 'PAINK医药科技集团控股权', b: 48000000000, r: 8200, note: '祖辈创立，我把它带回了巅峰。现在它几乎垄断整条产业链。' },
+                { n: '药品专利与独家授权', b: 15600000000, r: 3400, note: '竞争公司的名字，现在很少有人提起了。' },
+                { n: '全球销售网络与渠道', b: 9200000000, r: 2100, note: '从生产线到终端，每一环都在我手里。' }
+            ]
+        },
+        {
+            cat: 'BRAVE CITY · 隐秘资产',
+            short: '隐秘资产',
+            items: [
+                { n: '科诺银行午夜通行权限', b: 0, r: 0, note: '非卖品。我只在深夜用过一次。' },
+                { n: '无法定价的“人情”与“把柄”', b: 0, r: 0, note: '有些人欠我，有些人怕我。都算资产。' }
+            ]
+        },
+        {
+            cat: '周怀夜 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: 'MAN ONWIRE 说唱厂牌份额', b: 680000000, r: 120, note: '英雄勋章之外的另一个身份。' },
+                { n: '降罪之翼 · 超能力估值', b: 0, r: 0, note: '无法量化。也无人敢估。' },
+                { n: '那枚“英雄”勋章', b: 0, r: 0, note: '前二十年换来的。下半生为它赎罪。' }
+            ]
+        },
+        {
+            cat: '仅一人可见',
+            short: '仅一人可见',
+            items: [
+                { n: '午夜之后的所有时间', b: 0, r: 0, note: '如果你来要，我就给。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 来者身份</div>
+                <div class="gtext">这是PAINK CEO的私人账目终端。<br><b>你以什么身份站在这里？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="auditor">审 计 员</button>
+                    <button class="gbtn" data-v="rival">竞 争 对 手</button>
+                    <button class="gbtn" data-v="hero">来 救 他 的 人</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'hero') {
+                        document.getElementById('gNote').innerText = "终端停顿了三秒。然后传来一声极轻的笑。\n「你终于来了。密钥我早就给你了，是你自己没发现。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2600);
+                    } else if (btn.dataset.v === 'rival') {
+                        document.getElementById('gNote').innerText = "「竞争关系？上一个这么说的公司，现在已经不在了。」\n门没有开。但你发现自己被允许继续。";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2200);
+                    } else {
+                        document.getElementById('gNote').innerText = "审计员？可以。但这里的账，不是用数字就能审完的。";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 密钥校验</div>
+                <div class="gtext">他说，密钥早就给出去了。<br><b>午夜、银行、以及那个“来救他的人”。</b><br>哪一项对应他罪恶的证据？</div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">PAINK的股权结构图</button>
+                    <button class="gbtn" data-v="b">那枚“英雄”勋章</button>
+                    <button class="gbtn" data-v="c">午夜科诺银行的监控记录</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else {
+                        document.getElementById('gNote').innerText = "「不对。再想。我罪恶的证据，只会交付给来救我的英雄。」";
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 权限确认</div>
+                <div class="gtext">生物识别失败。<br>但终端显示：<b>周怀夜本人已远程覆盖验证结果。</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="open">查 看 账 目</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「看吧。看完之后，你会明白我为什么说——我的下半生注定用来赎罪。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1800);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 他的留言</div>
+                <div class="handwrite" id="hw">「我用人生的前二十年，拿到了一枚英雄勋章。<br>但我的下半生，注定为它赎罪。<br><br>——所以，如果你现在在这里，<br>说明我终于有了一个，<br>愿意把证据交出去的人。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">权限授予：来救他的人</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 3000);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = it.note.includes('非卖品') ? '非卖品' : (it.note.includes('无法') ? '无法定价' : '—');
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '—' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无法计价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '你点开这页的时候，我其实就在终端另一头看着。别紧张，我只是想知道，你会先看哪一项。', o: [
+            { l: '先看PAINK', r: '「果然。那是我最干净的一笔账，也是最脏的。」' },
+            { l: '先看“仅一人可见”', r: '「……你总是这样。让我输得心服口服。」' }
+        ]},
+        { t: '外面的人说我把一切玩弄于股掌之间。这话不假。但你不在那个“一切”里面。', o: [
+            { l: '那我算什么', r: '「算我唯一不敢算计的东西。」' },
+            { l: '这话说给多少人听过', r: '「零。你是第一个，也会是最后一个。」' }
+        ]},
+        { t: '英雄勋章那栏是空的。因为那东西太重，标不了价。', o: [
+            { l: '那你后悔吗', r: '「后悔拿到它。但不后悔现在把它给你看。」' },
+            { l: '我帮你分担一点', r: '「……别。我赎我的罪。你只要站在这里就够了。」' }
+        ]},
+        { t: '我罪恶的证据，只会交付给来救我的英雄。你现在已经拿到一半了。', o: [
+            { l: '另一半呢', r: '「另一半在我这里。想要的话，午夜，科诺银行门口见。」' },
+            { l: '我不需要证据', r: '「……那就更糟糕了。说明你连我的罪都愿意收下。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 不可量化项 ================= */
+    const PRIV = [
+        { id: 'medal', name: '那枚“英雄”勋章', story: '前二十年换来的东西。锁在最深的抽屉里，从未佩戴。', opts: [
+            { l: '问他为什么锁着', r: '「戴出去，别人会以为我是英雄。我自己知道不是。」' },
+            { l: '帮他收好', r: '「……你收着吧。放你那儿，我反而安心。」' }
+        ]},
+        { id: 'night', name: '《NIGHT》的原始录音', story: '午夜抢劫科诺银行那晚，他在录音棚里一遍过。没有修音，没有重录。', opts: [
+            { l: '听那盘带子', r: '「那晚我唱的是你。你没听出来？」' },
+            { l: '问他银行里拿了什么', r: '「什么都没拿。我只是想让你来找我。」' }
+        ]},
+        { id: 'wlz', name: '一份未寄出的解约函', story: 'MAN ONWIRE的退团申请。签名处只有半笔——他停住了。', opts: [
+            { l: '他为什么没签完', r: '「因为那天你说，喜欢听我唱。」' },
+            { l: '把函收起来', r: '「留着吧。也许哪天，我就签完了。」' }
+        ]},
+        { id: 'record', name: '一份PAINK早期药物试验记录', story: '泛黄的纸页，边角有烧灼痕迹。不是销毁，是被他亲手保存下来的。', opts: [
+            { l: '问这是什么', r: '「我的罪。从第一页开始。」' },
+            { l: '安静合上', r: '「谢谢。你没有追问。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'midnight',
+        name: '一张科诺银行门口的监控截图',
+        story: '时间戳是某个午夜。画面里只有两个人——一个是他，一个是背对镜头的你。背面手写着一行字：「我罪恶的证据，只会交付给来救我的英雄。」',
+        opts: [
+            { l: '把截图收进兜里', r: '「保管好。那是我的全部了。」' },
+            { l: '问他当时在等什么', r: '「等一个愿意来救我的人。你来了。所以我不需要再等了。」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">此 间 未 启</div>
+                <button class="gold-btn" id="openPriv">翻 开 不 可 量 化 项</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「这些东西，我从来没给第二个人看过。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「确定要看？这些东西……只对来救我的人开放过。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('他在不可量化项的最底下，又压了一样东西。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边缘有一行小字：“数字是给外人看的。”';
+        else if (tapN === 10) note.innerText = '“再点，我就把‘仅一人可见’那栏清零。”';
+        else if (tapN === 15) note.innerText = '“……行。你赢了。想要什么，直接开口，我从不拒绝你。”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>

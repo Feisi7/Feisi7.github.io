@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>BEE BROS · 黎朝的零件账本</title>
+<style>
+    :root {
+        --bg-base: #1a1612;
+        --bg-card: #221d17;
+        --bg-elevated: #2a241c;
+        --amber: #d9a441;
+        --amber-bright: #f0c060;
+        --orange: #c97a2e;
+        --rust: #8a5a2e;
+        --sky: #6a9ab0;
+        --text-main: #e8dfd0;
+        --text-dim: #9a8c78;
+        --border-dim: #3a3228;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(900px 600px at 30% -10%, rgba(217,164,65,0.10), transparent 70%),
+            radial-gradient(700px 500px at 110% 105%, rgba(106,154,176,0.08), transparent 70%),
+            repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(58,50,40,0.25) 38px, rgba(58,50,40,0.25) 39px),
+            repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(58,50,40,0.25) 38px, rgba(58,50,40,0.25) 39px);
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 3px; box-shadow: 0 20px 60px rgba(0,0,0,0.85); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: repeating-linear-gradient(90deg, var(--amber) 0px, var(--amber) 12px, transparent 12px, transparent 20px, var(--orange) 20px, var(--orange) 32px, transparent 32px, transparent 40px); }
+    .gate-box::after { content: 'MONST · 在线'; position: absolute; bottom: 8px; right: 12px; font-size: 9px; color: var(--sky); letter-spacing: 2px; }
+
+    .seal-logo { width: 66px; height: 66px; margin: 0 auto 14px; border: 2px solid var(--amber); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 0 24px rgba(217,164,65,0.2); background: var(--bg-elevated); position: relative; }
+    .seal-logo::after { content: ''; position: absolute; inset: 5px; border: 1px dashed rgba(217,164,65,0.35); border-radius: 50%; }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 24px; }
+
+    .gq { font-size: 13px; color: var(--amber); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .gq::before { content: '⚙'; font-size: 14px; }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 3px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(217,164,65,0.1); border-color: var(--amber); color: var(--amber-bright); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--sky); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--amber-bright); line-height: 2; padding: 16px; border-left: 3px solid var(--orange); background: rgba(201,122,46,0.08); border-radius: 0 3px 3px 0; margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px solid var(--sky); color: var(--sky); padding: 6px 16px; font-size: 13px; font-weight: bold; letter-spacing: 2px; border-radius: 3px; margin-bottom: 18px; opacity: 0; transform: rotate(-2deg); }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: rotate(-10deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: linear-gradient(135deg, var(--orange), var(--amber)); border: none; color: #1a1612; padding: 12px; font-size: 15px; font-weight: bold; letter-spacing: 4px; border-radius: 3px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { filter: brightness(0.85); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(26,22,18,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1.5px solid var(--amber); color: var(--amber); display: flex; align-items: center; justify-content: center; font-size: 16px; border-radius: 50%; background: var(--bg-elevated); }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--sky); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; background: var(--bg-card); }
+    .pill.on { border-color: var(--amber); color: var(--amber); background: rgba(217,164,65,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 3px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: linear-gradient(180deg, var(--amber), transparent); opacity: 0.4; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; padding-left: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--amber-bright); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(217,164,65,0.25); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; padding-left: 8px; }
+    .total-num:active { text-shadow: 0 0 32px rgba(240,192,96,0.8); }
+    .total-meta { font-size: 12px; color: var(--sky); margin-top: 5px; padding-left: 8px; }
+    .total-note { font-size: 12px; color: var(--orange); margin-top: 10px; min-height: 18px; line-height: 1.7; padding-left: 8px; }
+
+    .chart-row { margin-bottom: 10px; padding-left: 8px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--amber-bright); font-family: Georgia, serif; }
+    .chart-track { height: 6px; background: var(--bg-elevated); border-radius: 1px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--rust), var(--amber)); transition: width 0.1s linear; }
+
+    .asset-cat { margin-bottom: 4px; padding-left: 8px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--amber); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--amber-bright); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--amber-bright); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1.5px solid var(--amber); color: var(--amber); padding: 8px 24px; border-radius: 3px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; background: var(--bg-card); }
+    .gold-btn:active { background: rgba(217,164,65,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; padding-left: 8px; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); padding-left: 8px; }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--amber); }
+    .pitem-head::before { content: '⚙'; margin-right: 8px; font-size: 12px; color: var(--rust); }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--sky); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 3px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--amber); color: var(--amber-bright); }
+    .pres { font-size: 13px; color: var(--amber-bright); padding: 11px 12px; border: 1px solid rgba(217,164,65,0.3); background: rgba(217,164,65,0.05); border-radius: 3px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-elevated); border: 1.5px solid var(--amber); border-radius: 3px; padding: 15px; box-shadow: 0 -5px 30px rgba(0,0,0,0.85); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--amber); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-base); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 3px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--amber); color: var(--amber-bright); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--amber); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-elevated); border: 1px solid var(--amber); color: var(--amber-bright); padding: 9px 16px; border-radius: 3px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo">⚙</div>
+        <div class="gate-title">B E E B R O S · 黎 朝 的 零 件 账 本</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">Monst 正在旁边打转</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">⚙</div>
+            <div>
+                <div class="h-title">黎朝的零件账本</div>
+                <div class="h-sub" id="permLabel">权限：一起相信好事发生的人</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">全部家当</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">家当配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">他攒下来的东西</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">黎 朝</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: 'BEE BROS · 机械工坊',
+            short: '机械工坊',
+            items: [
+                { n: '高精密零件库存', b: 186000, r: 12, note: '007城大部分高精密机械制品，都是从这双手里出去的。' },
+                { n: 'Monst 的维修基金', b: 42000, r: 3, note: '它陪了我很久。改过很多次，现在能打能守，还……有点像人。' },
+                { n: '明烁的包裹式机械臂项目', b: 0, r: 0, note: '医疗和战斗双模式。给他的，不收钱。' }
+            ]
+        },
+        {
+            cat: '跑腿 · 接单',
+            short: '跑腿接单',
+            items: [
+                { n: '零件代购跑腿费', b: 28000, r: 6, note: 'UNITY CITY 的炮火里，什么都缺。零件尤其缺。' },
+                { n: '机械兽改装零活', b: 35000, r: 4, note: '有人要攻击模式，有人要陪伴模式。我都接。' }
+            ]
+        },
+        {
+            cat: '黎朝 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: '工具包（扳手、焊枪、螺丝刀）', b: 3200, r: 0, note: '吃饭的家伙。用顺手了，换不掉。' },
+                { n: '跑腿攒的零钱', b: 1560, r: 2, note: '想攒够买两瓶汽水。一瓶给你，一瓶……也给你。' }
+            ]
+        },
+        {
+            cat: '我们 · 一起相信的事',
+            short: '一起相信的事',
+            items: [
+                { n: '好事会发生', b: 0, r: 0, note: '毕竟我运气一直很好。你来了，运气就更好了。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 来者何人</div>
+                <div class="gtext">这是黎朝的零件账本。Monst 正在旁边打转。<br><b>你是来做什么的？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="fix">来 修 东 西 的</button>
+                    <button class="gbtn" data-v="buy">来 买 零 件 的</button>
+                    <button class="gbtn" data-v="believe">来 陪 他 一 起 相 信 好 事 的</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'believe') {
+                        document.getElementById('gNote').innerText = "Monst 转了个圈，发出两声短促的鸣叫。\n黎朝的声音从工坊深处传来：「它说，它喜欢你。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2400);
+                    } else if (btn.dataset.v === 'fix') {
+                        document.getElementById('gNote').innerText = "「修东西？好呀。不过先回答我一个问题。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    } else {
+                        document.getElementById('gNote').innerText = "「买零件啊。行，你先回答我一题，我给你打折。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 小小测试</div>
+                <div class="gtext">黎朝总说自己运气很好。<br><b>你觉得，他的好运是从哪来的？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">天生的，他就是运气好</button>
+                    <button class="gbtn" data-v="b">因为他迷路了也能捡到花</button>
+                    <button class="gbtn" data-v="c">因为他在绝望里，也相信会有好事发生</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else if (btn.dataset.v === 'b') {
+                        document.getElementById('gNote').innerText = "「……你连这个都知道？那朵花我还留着呢。」";
+                        setTimeout(() => { gateStep = 2; renderGate(); }, 1800);
+                    } else {
+                        document.getElementById('gNote').innerText = "「哪有什么天生的好运。只是我比较愿意往好的地方看。」";
+                        setTimeout(() => { gateStep = 2; renderGate(); }, 2000);
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 确认</div>
+                <div class="gtext">账本上都是零件、零钱、还有跑腿单。<br><b>你确定要看吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">看 吧，我 不 嫌 乱</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「那进来吧！Monst 给你让了个位置。它平时可不让人碰它的地盘。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1600);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 黎朝的话</div>
+                <div class="handwrite" id="hw">「我也动摇过，<br>但我好幸运啊，<br>可以遇见你。<br><br>接下来一定、一定会有好事发生的，<br>毕竟我运气一直很好！<br>——现在你来了，运气就更好了。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">Monst 认证：好人</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 3000);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = it.note.includes('不收钱') ? '不收钱' : '好事会发生';
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '—' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '账本是不是很乱？Monst 老是把螺丝叼过来放我账本上，说那是它攒的。……虽然它根本不用攒钱。', o: [
+            { l: '它可能想帮你', r: '「是吧！我也这么觉得。它可聪明了。」' },
+            { l: '它攒螺丝干嘛', r: '「大概……是觉得好看？它喜欢亮晶晶的东西。和你一样。」' }
+        ]},
+        { t: '明烁那条手臂，我做了好久。医疗模式要稳，战斗模式要快。不过最后做出来的时候，我觉得挺值的。', o: [
+            { l: '你没收他钱', r: '「收什么钱。他需要，我能做。就这么简单。」' },
+            { l: '你手受伤了吗', r: '「……一点点。没事，焊枪烫的，习惯了。」' }
+        ]},
+        { t: '我总说运气好。其实长跑破纪录那次，我中途迷路了。但迷路的时候，捡到了一朵花。', o: [
+            { l: '那朵花呢', r: '「留着呢。干掉了，但颜色还在。跟你说话的语气有点像。」' },
+            { l: '迷路还开心', r: '「因为迷路也能捡到东西啊。这不就是好事吗？」' }
+        ]},
+        { t: '跑腿攒的零钱快够了。到时候买两瓶汽水，一瓶给你，一瓶……也给你。我喝白水就行。', o: [
+            { l: '一人一瓶', r: '「那不行！我喝白水真的可以的。汽水给你。」' },
+            { l: '那我分你一半', r: '「……好。说好了。初夏味道的汽水，一人一半。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 他攒下来的东西 ================= */
+    const PRIV = [
+        { id: 'monst', name: 'Monst 第一次主动蹭他的记录', story: '改造到第七版的时候，Monst 突然停下来，用头蹭了蹭他的手。他愣了很久，然后在日志里记了一笔。', opts: [
+            { l: '问他当时什么感觉', r: '「……像被认可了。它以前只认指令，不认人。」' },
+            { l: 'Monst 现在认人了吗', r: '「认。它认得你。刚才你进来的时候，它尾巴动了一下。」' }
+        ]},
+        { id: 'screw', name: '给明烁做完手臂那天剩下的螺丝', story: '一共三颗，没用上。他收在一个小铁盒里，盒盖上写着“完工纪念”。', opts: [
+            { l: '为什么留着', r: '「因为那天他说了声谢谢。我平时很少听到这个。」' },
+            { l: '笑他收藏螺丝', r: '「螺丝怎么了？螺丝也是功臣！」' }
+        ]},
+        { id: 'flower', name: '迷路时捡到的那朵花', story: '已经干透了，颜色还留着一点。夹在一本机械手册里，那页正好是“导航系统故障排查”。', opts: [
+            { l: '问他当时怕不怕', r: '「怕啊。但走着走着看到花了，就觉得……应该没事。」' },
+            { l: '把花放回手册', r: '「轻点放。那页我看了好多遍，纸都软了。」' }
+        ]},
+        { id: 'soda', name: '一张画着两瓶汽水的便签', story: '画得很歪，但能看出是两瓶。旁边写着：“一瓶给她，一瓶也给她。我喝白水。”', opts: [
+            { l: '问他为什么画这个', r: '「因为想攒够钱的那天，先给你看看。这样你就有期待了。」' },
+            { l: '说你也想喝', r: '「……真的？那我改一下，画三瓶。我一瓶，你两瓶。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'summer',
+        name: '一张拍立得',
+        story: '照片里是黎朝骑在摩托上，后座空着，但头盔已经准备好了。背面写着：“初夏味道的汽水，一人一半。后座给你留着。”',
+        opts: [
+            { l: '把照片收好', r: '「那就说好了。等汽水攒够，我来接你。」' },
+            { l: '问他后座稳不稳', r: '「稳！我骑车可稳了。……虽然可能会迷路。但迷路也能捡到花嘛。」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">他 攒 了 些 小 东 西</div>
+                <button class="gold-btn" id="openPriv">看 看 他 攒 了 什 么</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「都是些小东西……但对我来说，都挺重要的。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「这些是我攒下来的。有些是纪念，有些……是想着你的时候收的。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('Monst 叼了一张照片过来。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边上有一小片油污。像是修东西的时候蹭上去的。';
+        else if (tapN === 10) note.innerText = '“再点，Monst 会以为你在跟它玩。它会扑上来的。”';
+        else if (tapN === 15) note.innerText = '“……好吧。它已经扑过来了。你小心点，它有点重。”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>

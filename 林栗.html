@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>MAN ONWIRE · 林栗的志愿账本</title>
+<style>
+    :root {
+        --bg-base: #0c0e12;
+        --bg-card: #13161c;
+        --bg-elevated: #1a1e26;
+        --ice-blue: #6a9ac8;
+        --ice-bright: #a8c8e8;
+        --warm: #d4a06a;
+        --warm-bright: #f0c890;
+        --white: #e8ecf0;
+        --text-main: #dce0e8;
+        --text-dim: #7a8294;
+        --border-dim: #22262e;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(900px 600px at 50% -10%, rgba(106,154,200,0.08), transparent 70%),
+            radial-gradient(700px 500px at 110% 105%, rgba(212,160,106,0.06), transparent 70%),
+            linear-gradient(rgba(34,38,46,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(34,38,46,0.3) 1px, transparent 1px);
+        background-size: auto, auto, 44px 44px, 44px 44px;
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 2px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--ice-blue), var(--warm), transparent); }
+    .gate-box::after { content: '科诺大学 · 学生会'; position: absolute; bottom: 8px; right: 12px; font-size: 9px; color: var(--ice-blue); letter-spacing: 2px; }
+
+    .seal-logo { width: 66px; height: 66px; margin: 0 auto 14px; border: 1.5px solid var(--ice-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 24px rgba(106,154,200,0.15); background: var(--bg-elevated); position: relative; }
+    .seal-logo::after { content: ''; position: absolute; inset: 5px; border: 1px dashed rgba(106,154,200,0.25); border-radius: 50%; }
+    .seal-logo span { color: var(--ice-bright); font-family: Georgia, serif; }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 24px; }
+
+    .gq { font-size: 13px; color: var(--ice-blue); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .gq::before { content: '◇'; font-size: 14px; color: var(--warm); }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 2px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(106,154,200,0.08); border-color: var(--ice-blue); color: var(--ice-bright); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--warm); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--warm-bright); line-height: 2; padding: 16px; border-left: 2px solid var(--warm); background: rgba(212,160,106,0.04); margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px solid var(--ice-blue); color: var(--ice-blue); padding: 5px 15px; font-size: 13px; font-weight: bold; letter-spacing: 2px; transform: rotate(-2deg); margin-bottom: 18px; opacity: 0; }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: rotate(-10deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: transparent; border: 1px solid var(--ice-blue); color: var(--ice-blue); padding: 12px; font-size: 15px; letter-spacing: 5px; border-radius: 2px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { background: rgba(106,154,200,0.1); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(12,14,18,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1px solid var(--ice-blue); color: var(--ice-blue); display: flex; align-items: center; justify-content: center; font-size: 15px; border-radius: 50%; background: var(--bg-elevated); }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--warm); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; background: var(--bg-card); }
+    .pill.on { border-color: var(--ice-blue); color: var(--ice-blue); background: rgba(106,154,200,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 2px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--ice-blue), var(--warm), transparent); opacity: 0.5; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--ice-bright); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(106,154,200,0.2); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; }
+    .total-num:active { text-shadow: 0 0 32px rgba(168,200,232,0.7); }
+    .total-meta { font-size: 12px; color: var(--warm); margin-top: 5px; }
+    .total-note { font-size: 12px; color: var(--warm-bright); margin-top: 10px; min-height: 18px; line-height: 1.7; }
+
+    .chart-row { margin-bottom: 10px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--ice-bright); font-family: Georgia, serif; }
+    .chart-track { height: 5px; background: var(--bg-elevated); border-radius: 1px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--ice-blue), var(--warm)); transition: width 0.1s linear; }
+
+    .asset-cat { margin-bottom: 4px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--ice-blue); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--ice-bright); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--ice-bright); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1px solid var(--ice-blue); color: var(--ice-blue); padding: 8px 24px; border-radius: 2px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; background: var(--bg-card); }
+    .gold-btn:active { background: rgba(106,154,200,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--ice-blue); }
+    .pitem-head::before { content: '◇'; margin-right: 8px; font-size: 12px; color: var(--warm); }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--warm); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 2px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--ice-blue); color: var(--ice-bright); }
+    .pres { font-size: 13px; color: var(--warm-bright); padding: 11px 12px; border: 1px solid rgba(212,160,106,0.3); background: rgba(212,160,106,0.04); border-radius: 2px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-elevated); border: 1px solid var(--ice-blue); border-radius: 2px; padding: 15px; box-shadow: 0 -5px 30px rgba(0,0,0,0.85); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--ice-blue); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-base); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 2px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--ice-blue); color: var(--ice-bright); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--ice-blue); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-elevated); border: 1px solid var(--ice-blue); color: var(--ice-bright); padding: 9px 16px; border-radius: 2px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo"><span>L</span></div>
+        <div class="gate-title">M A N O N W I R E · 林 栗 的 志 愿 账 本</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">未来有很多也许</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">◇</div>
+            <div>
+                <div class="h-title">林栗的志愿账本</div>
+                <div class="h-sub" id="permLabel">权限：翻过围栏的人</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">全部家当</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">家当配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">他没交上去的东西</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">林 栗</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: '科诺大学 · 学业估值',
+            short: '学业估值',
+            items: [
+                { n: '理性适应评测 S 级估值', b: 0, r: 0, note: '公认近几年最优秀的入学生。没有之一。' },
+                { n: '课业第一的隐性估值', b: 520000, r: 12, note: '自有记录以来，无一例外均是第一。' },
+                { n: '学生会主席的象征性薪酬', b: 8000, r: 1, note: '象征性的。但位置本身值钱。' }
+            ]
+        },
+        {
+            cat: 'ZENITH · 非公开实习',
+            short: '非公开实习',
+            items: [
+                { n: 'X助理的非公开报酬', b: 180000, r: 20, note: '只向X汇报的工作。报酬不低，内容不公开。' },
+                { n: 'ZENITH内部权限估值', b: 0, r: 0, note: '父母是ZENITH的佼佼者。权限这种东西，家里就有。' }
+            ]
+        },
+        {
+            cat: '林栗 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: '镜影双生的双份能力估值', b: 0, r: 0, note: '猜猜看，这场游戏最后留下来的，是哪个我。' },
+                { n: '眼镜（备用）', b: 1200, r: 0, note: '摘下来的时候，就是另一个我了。' },
+                { n: '未提交的志愿表', b: 0, r: 0, note: '反正我的理想，在很久以前就被规划好了。' }
+            ]
+        },
+        {
+            cat: '你 · 二十岁的理想',
+            short: '二十岁的理想',
+            items: [
+                { n: '未来有很多也许', b: 0, r: 0, note: '但我二十岁的理想，一定与你有关。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 身份声明</div>
+                <div class="gtext">这是林栗的账本。他站在礼堂台上时，脸上没有表情。<br><b>你见过哪个林栗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="president">学 生 会 主 席</button>
+                    <button class="gbtn" data-v="intern">Z E N I T H 实 习 生</button>
+                    <button class="gbtn" data-v="window">凌 晨 窗 前 那 个 笑 了 的 人</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'window') {
+                        document.getElementById('gNote').innerText = "终端安静了很久。然后屏幕角落跳出一行小字：\n「你翻围栏的时候，我就知道是你。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2600);
+                    } else if (btn.dataset.v === 'intern') {
+                        document.getElementById('gNote').innerText = "「非公开工作。……你看到的，只是我想让你看到的。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2000);
+                    } else {
+                        document.getElementById('gNote').innerText = "「学生会主席。嗯。这是最外面的一层。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 志愿表校验</div>
+                <div class="gtext">他从未交过志愿表。<br><b>那张表上最后写了什么？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">成为ZENITH的掌权者</button>
+                    <button class="gbtn" data-v="b">成为最优秀的毕业生</button>
+                    <button class="gbtn" data-v="c">未来有很多也许，但我二十岁的理想，一定与你有关</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else {
+                        document.getElementById('gNote').innerText = "「那是别人的理想。不是我的。」";
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 确认</div>
+                <div class="gtext">账本里有学业估值、非公开报酬、摘下来的眼镜。<br><b>你确定要看吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">看 吧，我 翻 过 围 栏 了</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「那进来吧。窗没关。……我特意没关。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1600);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 林栗的话</div>
+                <div class="handwrite" id="hw">「未来有很多也许，<br>但我二十岁的理想，<br>一定与你有关。<br><br>——猜猜看，<br>这场游戏最后留下来的，<br>是哪个我？<br><br>……其实答案很简单。<br>留下来的，是为你摘掉眼镜的那个。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">权限已变更：翻过围栏的人</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 3000);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = it.note.includes('规划好了') ? '未提交' : (it.note.includes('与你有关') ? '与你有关' : '无法计价');
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '—' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '看到“未提交的志愿表”那栏了吗。别人都以为我没交是因为不屑。其实……是因为没想好。直到那天晚上。', o: [
+            { l: '那天晚上怎么了', r: '「你翻过围栏，敲了我的窗。然后递给我一张空白表。」' },
+            { l: '现在想好了吗', r: '「想好了。写完了。就在账本最底下压着。」' }
+        ]},
+        { t: '镜影双生那栏是空的。不是没法估，是不想估。两个我，一个是给外面看的，一个是给你的。', o: [
+            { l: '那我是哪个我', r: '「你说呢。你见过我在礼堂台上笑吗？没有吧。」' },
+            { l: '两个我都想见', r: '「……贪心。不过，可以。反正都是你的。」' }
+        ]},
+        { t: '入学典礼那天，我说“我也没有接受情感抑制”。你知道那意味着什么吗。', o: [
+            { l: '意味着什么', r: '「意味着我所有的冷静都是我自己演的。包括那些不想让你看到的。」' },
+            { l: '那你现在不用演了', r: '「……好。那就不演了。」' }
+        ]},
+        { t: '我父母是000城最早植入芯片的那批人。他们现在……很理性。非常理性。理性到不记得喜欢过什么。', o: [
+            { l: '你难过吗', r: '「不难过。我只是不想变成那样。所以我一直在藏一些……不理性的东西。」' },
+            { l: '你藏了什么', r: '「藏了你。藏在那个志愿表里，藏在悬浮屏里，藏在账本最底下。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 他没交上去的东西 ================= */
+    const PRIV = [
+        { id: 'form', name: '那张只有一道折痕的空白志愿表', story: '你翻过围栏递给他的那张。空白了很久。现在上面有字了。', opts: [
+            { l: '问他写了什么', r: '「你猜。……猜对了，我摘眼镜给你看。」' },
+            { l: '不猜，直接看', r: '「等等——……算了。反正迟早要给你看。」' }
+        ]},
+        { id: 'screen', name: '悬浮屏里的画面截图', story: '修剪花枝的少年、骑车的外卖小哥、按心情调酒的调酒师。他一点点拼凑出来的、不理性的未来。', opts: [
+            { l: '问他为什么收这些', r: '「因为他们在做自己喜欢的事。我没有。所以……看着他们，好像也能借一点。」' },
+            { l: '那你现在有想做的事了', r: '「有。……你猜是什么。」' }
+        ]},
+        { id: 'glasses', name: '他摘下眼镜的那个瞬间', story: '没有录像。但他自己记得。你说“你笑了”的时候，他愣了一下，然后真的笑了。', opts: [
+            { l: '问他当时为什么愣住', r: '「因为没人见过。你是第一个。」' },
+            { l: '说以后想多看看', r: '「……那你得常来。窗我永远不关。」' }
+        ]},
+        { id: 'handwriting', name: '那句“一定与你有关”的笔迹', story: '写在志愿表最下面。字迹比平时潦草，像是终于不用再控制力度了。', opts: [
+            { l: '问他写的时候在想什么', r: '「在想你翻围栏的样子。有点笨，但……很好看。」' },
+            { l: '把笔迹描一遍', r: '「别描。描了就不是我的了。……不过，你想描就描吧。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'answer',
+        name: '账本最底下压着的那张志愿表',
+        story: '正面写着：“未来有很多也许，但我二十岁的理想，一定与你有关。”背面多了一行更新的字：“二十一岁的，也是。”',
+        opts: [
+            { l: '把表收好', r: '「收着吧。明年这个时候，我会再写一行。」' },
+            { l: '问他明年写什么', r: '「写……“二十二岁的，还是。”」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">他 没 交 上 去 的 东 西</div>
+                <button class="gold-btn" id="openPriv">看 看 他 藏 了 什 么</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「这些东西……我本来打算永远不给人看的。但你翻过围栏了。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「都是些不理性的东西。我父母要是知道，大概会说我评测白拿了。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('账本最底下，还压着一张纸。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边角画了一副眼镜。镜片反光，看不清后面的表情。';
+        else if (tapN === 10) note.innerText = '“再点，我就把账本锁了。……开玩笑的。锁了也给你开。”';
+        else if (tapN === 15) note.innerText = '“行。你赢了。想要什么，直接说。……我很少对别人这么没原则。”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>

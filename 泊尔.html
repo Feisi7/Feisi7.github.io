@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PAT-K&L · 泊尔的杂货账本</title>
+<style>
+    :root {
+        --bg-base: #f5f0e8;
+        --bg-card: #fffdf8;
+        --bg-elevated: #f0e9dc;
+        --brown: #8b6f4e;
+        --brown-bright: #b8956a;
+        --green: #6b8f5e;
+        --green-bright: #8fb07d;
+        --orange: #d4884a;
+        --text-main: #4a3f35;
+        --text-dim: #9a8b7a;
+        --border-dim: #e0d6c8;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(800px 500px at 50% -10%, rgba(212,136,74,0.08), transparent 70%),
+            radial-gradient(600px 400px at 110% 105%, rgba(107,143,94,0.08), transparent 70%),
+            radial-gradient(circle, rgba(139,111,78,0.04) 1px, transparent 1px);
+        background-size: auto, auto, 24px 24px;
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 12px; box-shadow: 0 10px 40px rgba(139,111,78,0.12); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 20px; right: 20px; height: 3px; border-radius: 0 0 3px 3px; background: repeating-linear-gradient(90deg, var(--orange) 0px, var(--orange) 8px, var(--green) 8px, var(--green) 16px, var(--brown) 16px, var(--brown) 24px); opacity: 0.6; }
+
+    .seal-logo { width: 64px; height: 64px; margin: 0 auto 14px; border: 2px solid var(--orange); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--orange); font-size: 26px; font-weight: bold; box-shadow: 0 0 20px rgba(212,136,74,0.15); background: var(--bg-elevated); }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 24px; }
+
+    .gq { font-size: 13px; color: var(--orange); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .gq::before { content: '🐾'; font-size: 14px; }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 8px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(212,136,74,0.1); border-color: var(--orange); color: var(--brown); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--green); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--brown); line-height: 2; padding: 16px; border-left: 3px solid var(--orange); background: rgba(212,136,74,0.05); border-radius: 0 8px 8px 0; margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px dashed var(--green); color: var(--green); padding: 6px 16px; font-size: 13px; font-weight: bold; letter-spacing: 2px; border-radius: 20px; margin-bottom: 18px; opacity: 0; }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: scale(2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: var(--orange); border: none; color: #fff; padding: 12px; font-size: 15px; letter-spacing: 4px; border-radius: 8px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { background: var(--brown); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(245,240,232,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1.5px solid var(--orange); color: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 16px; border-radius: 50%; background: var(--bg-elevated); }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--green); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; background: var(--bg-card); }
+    .pill.on { border-color: var(--orange); color: var(--orange); background: rgba(212,136,74,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 12px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--brown); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(139,111,78,0.1); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; }
+    .total-num:active { text-shadow: 0 0 30px rgba(212,136,74,0.5); }
+    .total-meta { font-size: 12px; color: var(--green); margin-top: 5px; }
+    .total-note { font-size: 12px; color: var(--orange); margin-top: 10px; min-height: 18px; line-height: 1.7; }
+
+    .chart-row { margin-bottom: 10px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--brown); font-family: Georgia, serif; }
+    .chart-track { height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--green-bright)); transition: width 0.1s linear; border-radius: 3px; }
+
+    .asset-cat { margin-bottom: 4px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--brown); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--brown); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--brown); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1.5px solid var(--orange); color: var(--orange); padding: 8px 24px; border-radius: 20px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; background: var(--bg-card); }
+    .gold-btn:active { background: rgba(212,136,74,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--orange); }
+    .pitem-head::before { content: '🐾'; margin-right: 8px; font-size: 12px; }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--green-bright); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 8px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--orange); color: var(--brown); }
+    .pres { font-size: 13px; color: var(--brown); padding: 11px 12px; border: 1px solid rgba(212,136,74,0.3); background: rgba(212,136,74,0.05); border-radius: 8px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-card); border: 1.5px solid var(--orange); border-radius: 12px; padding: 15px; box-shadow: 0 -5px 30px rgba(139,111,78,0.15); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--orange); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 20px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--orange); color: var(--brown); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--orange); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-card); border: 1px solid var(--orange); color: var(--brown); padding: 9px 16px; border-radius: 20px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; box-shadow: 0 4px 20px rgba(139,111,78,0.15); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo">🐾</div>
+        <div class="gate-title">PAT-K&L · 泊 尔 的 杂 货 账 本</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">库噜和兰登都在看着你哦</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">🐱</div>
+            <div>
+                <div class="h-title">泊尔的杂货账本</div>
+                <div class="h-sub" id="permLabel">权限：被动物捡到的人类孩子</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">全部家当</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">家当配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">它们捡到的东西</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">泊 尔</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: 'PAT-K&L · 手工订单',
+            short: '手工订单',
+            items: [
+                { n: '电子宠物服装定制收入', b: 128000, r: 8, note: '只接网络订单，没人见过我。但衣服都是照着库噜和兰登做的。' },
+                { n: '冬日系列奖金', b: 50000, r: 0, note: '比赛第一名。奖金全换成了罐头。' },
+                { n: '老客户预付订金', b: 32000, r: 3, note: '有个客户每年都订，说我的衣服有“家的味道”。' }
+            ]
+        },
+        {
+            cat: '流浪动物救助站',
+            short: '救助站',
+            items: [
+                { n: '库噜的罐头基金', b: 4200, r: 1, note: '三花猫，名字来自她吃罐头的声音。' },
+                { n: '兰登的玩具罐', b: 3800, r: 1, note: '牧羊犬，被遗弃过。名字是前主人取的，我没改。' },
+                { n: '其他毛孩子的医药费', b: 15000, r: 2, note: '外城区居民密度最低，但毛孩子密度最高。' }
+            ]
+        },
+        {
+            cat: '泊尔 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: '手工缝纫工具', b: 2600, r: 0, note: '针脚要密，才暖和。' },
+                { n: '攒硬币的玻璃罐', b: 890, r: 2, note: '想给你买个礼物。因为……它们闪闪发亮，都很像你。' }
+            ]
+        },
+        {
+            cat: '我们 · 家人',
+            short: '家人',
+            items: [
+                { n: '库噜和兰登', b: 0, r: 0, note: '它们说，是它们捡到了我。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 来者何人</div>
+                <div class="gtext">这里住着泊尔，还有库噜和兰登。<br><b>你是来做什么的？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="buy">来 买 衣 服 的</button>
+                    <button class="gbtn" data-v="adopt">来 领 养 动 物 的</button>
+                    <button class="gbtn" data-v="home">来 带 他 回 家 的</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'home') {
+                        document.getElementById('gNote').innerText = "库噜从猫爬架上跳了下来，凑近屏幕闻了闻。\n兰登摇着尾巴，把下巴搁在了键盘上。\n「……它们好像很喜欢你。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2600);
+                    } else if (btn.dataset.v === 'adopt') {
+                        document.getElementById('gNote').innerText = "「领养？它们不是待领养的。……不过，你可以来看看它们。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2000);
+                    } else {
+                        document.getElementById('gNote').innerText = "「买衣服啊。你先回答我一个问题，我就给你做。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 小小测试</div>
+                <div class="gtext">库噜和兰登，你觉得哪一个是被遗弃过的？</div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">库噜，因为她是流浪猫</button>
+                    <button class="gbtn" data-v="b">兰登，因为他被前主人丢下了</button>
+                    <button class="gbtn" data-v="c">都曾被丢下过，但都不是它们的错</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else if (btn.dataset.v === 'b') {
+                        document.getElementById('gNote').innerText = "「……你查过资料？也对，兰登的名字确实没改。」";
+                        setTimeout(() => { gateStep = 2; renderGate(); }, 1800);
+                    } else {
+                        document.getElementById('gNote').innerText = "「库噜是自己选择流浪的。兰登不是。……不过，谢谢你没把它们当成可怜虫。」";
+                        setTimeout(() => { gateStep = 2; renderGate(); }, 2000);
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 确认</div>
+                <div class="gtext">账本有点乱，都是些鸡毛蒜皮的东西。<br><b>你确定要看吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">看 看 吧，我 不 嫌 弃</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「那……进来吧。库噜给你留了块最软的垫子。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1600);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 泊尔的话</div>
+                <div class="handwrite" id="hw">「我们可不是在流浪，<br>这是一场自由的冒险。<br><br>只是冒险的时候，<br>顺便捡到了一个人类孩子，<br>和很多很多……<br>闪闪发亮的东西。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">欢迎加入我们 🐾</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 2800);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = '家人';
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '家人' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '账本是不是很乱？其实我本来不想记的。但库噜总把罐头藏在账本下面，兰登又老是把玩具叼过来……结果就记成这样了。', o: [
+            { l: '这样挺好的', r: '「是吧！我也觉得。比那些冷冰冰的数字好多了。」' },
+            { l: '罐头藏哪了', r: '「……你猜。猜对了分你一个。但兰登可能会吃醋。」' }
+        ]},
+        { t: '那个玻璃罐里的硬币，是攒着给你买礼物的。因为，它们闪闪发亮，都很像你。', o: [
+            { l: '你也很闪亮', r: '「……我？我是被它们捡回来的。闪亮的是它们。」' },
+            { l: '攒了多久了', r: '「从你说喜欢我做的衣服那天开始。快满了。」' }
+        ]},
+        { t: '其实我爸妈……他们植入了抑制芯片。后来就不记得喜欢过什么了。所以我跑了出来。', o: [
+            { l: '你难过吗', r: '「不难过。我有库噜和兰登。现在……还有你。」' },
+            { l: '我陪着你', r: '「……那你要说话算话。兰登会记住的，它记性可好了。」' }
+        ]},
+        { t: '我的衣服只卖给懂的人。你说，我该不该给那个每年都订的客户打个折？', o: [
+            { l: '该，他懂你', r: '「嗯。其实我早就给他打好折了，还多送了一条围巾。」' },
+            { l: '不打折，你也要吃饭', r: '「哈哈，有道理。库噜的罐头确实不能断。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 它们捡到的东西 ================= */
+    const PRIV = [
+        { id: 'kulu', name: '库噜蹭过的毛线团', story: '她最喜欢这个颜色的线。每次我织衣服，她都要在旁边滚来滚去。', opts: [
+            { l: '拿起来看看', r: '「别动！……开玩笑的。那上面全是她的毛，你拿一下就是一身猫毛。」' },
+            { l: '问库噜的名字', r: '「吃罐头的声音。呼噜呼噜的。所以叫库噜。」' }
+        ]},
+        { id: 'landon', name: '兰登分给他的第一口食物', story: '刚捡到兰登的时候，它很怕人。第二天，它把叼来的半块饼干放在了他脚边。', opts: [
+            { l: '他当时哭了吗', r: '「……没哭。就是眼睛有点酸。」' },
+            { l: '那半块饼干呢', r: '「收着呢。就在账本夹层里。别告诉兰登，它知道会不好意思的。」' }
+        ]},
+        { id: 'coin', name: '一枚被舔过的硬币', story: '攒硬币的时候，库噜以为是什么好吃的，舔了一口。他消毒了三遍，还是留下了。', opts: [
+            { l: '留着它做什么', r: '「因为那天库噜舔完之后，兰登也凑过来闻了闻。……算是它们也出过一份力。」' },
+            { l: '笑他傻', r: '「傻就傻吧。反正这枚硬币，我不会花。」' }
+        ]},
+        { id: 'note', name: '一张写了一半的便签', story: '上面写着：“今天也给毛孩子们做了新衣服。如果你在的话，可以……”后面没有了。', opts: [
+            { l: '问后面想写什么', r: '「……可以抱一下库噜。或者，抱一下我。」' },
+            { l: '帮他写完', r: '「你真的要写？那……那就写“可以留下来吃饭”吧。虽然我只会煮泡面。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'home',
+        name: '一张拍立得',
+        story: '照片里是泊尔、库噜和兰登，三个挤在一张小沙发上。背面写着：“这是我们捡到的最好的东西。如果你愿意，下次拍照，位置给你留好了。”',
+        opts: [
+            { l: '把照片收好', r: '「……那就说好了。下次拍照，你站中间。」' },
+            { l: '问他位置在哪', r: '「我旁边。兰登会挤过来一点。库噜可能会踩你的脚。」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">它 们 藏 了 些 东 西</div>
+                <button class="gold-btn" id="openPriv">看 看 它 们 捡 到 了 什 么</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「这些东西……都是它们叼回来的。我也没舍得扔。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「库噜和兰登的收藏品。有些是捡的，有些……是它们觉得你会喜欢的。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('兰登又叼了一样东西过来。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边角画了一只小猫。旁边写着：“库噜”。';
+        else if (tapN === 10) note.innerText = '“再点，兰登会以为你在跟它玩。”';
+        else if (tapN === 15) note.innerText = '“……好吧。它们都跑过来了。满意了？”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>

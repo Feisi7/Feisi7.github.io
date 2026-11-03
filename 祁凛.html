@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>MAN ONWIRE · 祁凛的棋局账本</title>
+<style>
+    :root {
+        --bg-base: #0a0a10;
+        --bg-card: #12121c;
+        --bg-elevated: #1a1a28;
+        --thunder: #7a8ac8;
+        --thunder-bright: #a8b8e8;
+        --gold: #c8a860;
+        --gold-bright: #e8c888;
+        --firework: #d47a8a;
+        --firework-bright: #f0a0b0;
+        --ink: #e0e0e8;
+        --text-main: #d8d8e4;
+        --text-dim: #7a7a90;
+        --border-dim: #222230;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(900px 600px at 50% -10%, rgba(122,138,200,0.08), transparent 70%),
+            radial-gradient(700px 500px at 110% 105%, rgba(212,122,138,0.05), transparent 70%);
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 2px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--thunder), var(--firework), transparent); }
+    .gate-box::after { content: '祁弈阁 · 对局存档'; position: absolute; bottom: 8px; right: 12px; font-size: 9px; color: var(--thunder); letter-spacing: 2px; }
+
+    .seal-logo { width: 66px; height: 66px; margin: 0 auto 14px; border: 1.5px solid var(--thunder); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 24px rgba(122,138,200,0.15); background: var(--bg-elevated); position: relative; }
+    .seal-logo::after { content: ''; position: absolute; inset: 4px; border: 1px dashed rgba(122,138,200,0.25); border-radius: 50%; }
+    .seal-logo span { color: var(--thunder-bright); font-family: "Songti SC", serif; }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 24px; }
+
+    .gq { font-size: 13px; color: var(--thunder-bright); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .gq::before { content: '⚡'; font-size: 14px; color: var(--gold); }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 2px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(122,138,200,0.1); border-color: var(--thunder); color: var(--thunder-bright); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--firework); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--thunder-bright); line-height: 2; padding: 16px; border-left: 2px solid var(--firework); background: rgba(212,122,138,0.04); margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px solid var(--gold); color: var(--gold); padding: 5px 15px; font-size: 13px; font-weight: bold; letter-spacing: 2px; transform: rotate(-2deg); margin-bottom: 18px; opacity: 0; }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: rotate(-10deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: transparent; border: 1px solid var(--thunder); color: var(--thunder); padding: 12px; font-size: 15px; letter-spacing: 5px; border-radius: 2px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { background: rgba(122,138,200,0.1); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(10,10,16,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1px solid var(--thunder); color: var(--thunder); display: flex; align-items: center; justify-content: center; font-size: 15px; border-radius: 50%; background: var(--bg-elevated); font-family: "Songti SC", serif; }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--firework); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; background: var(--bg-card); }
+    .pill.on { border-color: var(--thunder); color: var(--thunder); background: rgba(122,138,200,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 2px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--thunder), var(--firework), transparent); opacity: 0.5; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--thunder-bright); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(122,138,200,0.2); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; }
+    .total-num:active { text-shadow: 0 0 32px rgba(168,184,232,0.7); }
+    .total-meta { font-size: 12px; color: var(--firework); margin-top: 5px; }
+    .total-note { font-size: 12px; color: var(--gold-bright); margin-top: 10px; min-height: 18px; line-height: 1.7; }
+
+    .chart-row { margin-bottom: 10px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--thunder-bright); font-family: Georgia, serif; }
+    .chart-track { height: 5px; background: var(--bg-elevated); border-radius: 1px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--thunder), var(--firework)); transition: width 0.1s linear; }
+
+    .asset-cat { margin-bottom: 4px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--thunder); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--thunder-bright); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--thunder-bright); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1px solid var(--thunder); color: var(--thunder); padding: 8px 24px; border-radius: 2px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; background: var(--bg-card); }
+    .gold-btn:active { background: rgba(122,138,200,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--thunder); }
+    .pitem-head::before { content: '⚡'; margin-right: 8px; font-size: 12px; color: var(--gold); }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--firework); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 2px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--thunder); color: var(--thunder-bright); }
+    .pres { font-size: 13px; color: var(--gold-bright); padding: 11px 12px; border: 1px solid rgba(200,168,96,0.3); background: rgba(200,168,96,0.04); border-radius: 2px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-elevated); border: 1px solid var(--thunder); border-radius: 2px; padding: 15px; box-shadow: 0 -5px 30px rgba(0,0,0,0.85); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--thunder); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-base); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 2px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--thunder); color: var(--thunder-bright); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--thunder); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-elevated); border: 1px solid var(--thunder); color: var(--thunder-bright); padding: 9px 16px; border-radius: 2px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo"><span>祁</span></div>
+        <div class="gate-title">M A N O N W I R E · 祁 凛 的 棋 局 账 本</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">要捍卫最初的荣耀</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">祁</div>
+            <div>
+                <div class="h-title">祁凛的棋局账本</div>
+                <div class="h-sub" id="permLabel">权限：追上来的人</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">全部家当</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">家当配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">他没说出口的东西</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">祁 凛</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: '祁弈阁 · 对局与身价',
+            short: '对局身价',
+            items: [
+                { n: '祁弈阁棋局赌注存底', b: 86000000, r: 3200, note: '公开接受一切挑战。赌上一生荣誉。' },
+                { n: '战胜棋道100的荣誉', b: 0, r: 0, note: '最后一位被承认的人类棋手。无法计价。' },
+                { n: '“值得观察的人类样本”估值', b: 0, r: 0, note: '人工智能认定。无法计价。' }
+            ]
+        },
+        {
+            cat: '纵雷 · 能力估值',
+            short: '纵雷估值',
+            items: [
+                { n: '纵雷能力（非卖品）', b: 0, r: 0, note: '自出生便显露出掌控雷电的能力。非卖品。' },
+                { n: '祖父留下的旧棋子', b: 0, r: 0, note: '荣峥城公认的围棋大师。一手创建祁弈阁。' }
+            ]
+        },
+        {
+            cat: '祁凛 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: '棋谱手稿', b: 12800, r: 2, note: '落子时的记录。每一局都有。' },
+                { n: '同心扣（他说是普通结扣）', b: 0, r: 0, note: '“不，不是，什么同心扣……这就是一个普通绑衣服的结扣……”' }
+            ]
+        },
+        {
+            cat: '你 · 追上来的人',
+            short: '追上来的人',
+            items: [
+                { n: '烟火下他回头看的那一眼', b: 0, r: 0, note: '他跑了。但他回头了。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 来者何人</div>
+                <div class="gtext">这是祁凛的账本。他正坐在棋盘前，指尖有细微的电流。<br><b>你敢落子吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="watch">站 在 一 旁 观 棋</button>
+                    <button class="gbtn" data-v="challenge">坐 下 来 挑 战</button>
+                    <button class="gbtn" data-v="chase">在 他 跑 开 时 追 上 去</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'chase') {
+                        document.getElementById('gNote').innerText = "他抬头看了你一眼，耳朵尖有点红。\n「……追上来干嘛。我又没跑。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2400);
+                    } else if (btn.dataset.v === 'challenge') {
+                        document.getElementById('gNote').innerText = "「挑战？好。坐下。不过先回答我一题。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    } else {
+                        document.getElementById('gNote').innerText = "「观棋不语。……不过你可以说话。只有你可以。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 1800);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 棋局校验</div>
+                <div class="gtext">棋手们赌上一生荣誉，接受失败后被植入芯片的条件。<br><b>最终是谁战胜了“棋道100”？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">棋道100自己认输了</button>
+                    <button class="gbtn" data-v="b">荣峥城的围棋大师</button>
+                    <button class="gbtn" data-v="c">最后一位接受挑战的人类棋手，祁凛</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else {
+                        document.getElementById('gNote').innerText = "「……不对。再想。」他的指尖电流闪了一下。";
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 确认</div>
+                <div class="gtext">账本里有赌注存底、纵雷、棋谱手稿、同心扣。<br><b>你确定要看吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">看 吧，我 不 怕 输</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「……那进来吧。别碰那个结扣。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1600);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 祁凛的话</div>
+                <div class="handwrite" id="hw">「带着那天生的孤傲，<br>要捍卫最初的荣耀。<br><br>——不，不是，<br>什么同心扣……<br>这就是一个普通绑衣服的结扣……<br><br>……算了。<br>你要的话，就拿着。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">认证：追上来的人</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 3000);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = it.note.includes('他回头了') ? '回头了' : '无法计价';
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '—' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '账本上那个结扣那栏，你看到了吧。说了不是同心扣。就是普通绑衣服的。', o: [
+            { l: '那你为什么还留着', r: '「……忘了扔。仅此而已。」' },
+            { l: '我帮你扔了吧', r: '「别！……我是说，不用。放着就行。」' }
+        ]},
+        { t: '棋道100那局，我赢得很险。但赢了就是赢了。人类还没输。', o: [
+            { l: '你当时怕吗', r: '「怕。但怕也得下。后面没人了。」' },
+            { l: '你守住了', r: '「嗯。守住了。……谢谢你也在看。」' }
+        ]},
+        { t: '祖父走了以后，祁弈阁关了很久。再开的时候，我以为会没人来。', o: [
+            { l: '现在呢', r: '「现在……有人来了。还坐着不走。」' },
+            { l: '我不走', r: '「……随便你。棋盘够大。」' }
+        ]},
+        { t: '那天烟火下，我不是跑。我只是……走得比较快。', o: [
+            { l: '你还回头了', r: '「那是看烟花。不是看你。」' },
+            { l: '那你现在看我', r: '「……看就看。又不是不敢。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 他没说出口的东西 ================= */
+    const PRIV = [
+        { id: 'knot', name: '那个被他硬说成“普通结扣”的同心扣', story: '系得很认真，结扣打得很紧。他说是普通绑衣服的。但那个结，一看就是同心扣的编法。', opts: [
+            { l: '问他为什么编同心扣', r: '「……手滑。编错了。」' },
+            { l: '说编得很好看', r: '「……好看就拿着。别还给我。」' }
+        ]},
+        { id: 'record', name: '战胜棋道100那局的棋谱残页', story: '最后一手，他落子的时候指尖有雷光。棋谱上那一子画得很重，笔尖几乎戳破了纸。', opts: [
+            { l: '问他落子时在想什么', r: '「在想……不能输。后面没人了。」' },
+            { l: '说这一手很漂亮', r: '「……嗯。我也这么觉得。」' }
+        ]},
+        { id: 'glance', name: '烟火下他跑开前回头看的那一眼', story: '跑了几步，又回头看了一眼。烟火正好炸开，照亮了他的耳朵。红的。', opts: [
+            { l: '问他为什么回头', r: '「……看烟花。烟花在你后面。」' },
+            { l: '说他耳朵红了', r: '「没有！那是烟火的光！」' }
+        ]},
+        { id: 'stones', name: '祖父留下的旧棋子', story: '棋盒很旧了，但棋子擦得很亮。他每天都会拿出来擦一遍。', opts: [
+            { l: '问他祖父是什么样的人', r: '「很厉害的人。祁弈阁是他一手建的。我不能丢他的脸。」' },
+            { l: '说他会做得更好', r: '「……嗯。我会的。你看着就行。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'firework',
+        name: '他红着耳朵站在祁弈阁门口',
+        story: '手里攥着那个结扣。这次没有跑。他说：“……说了不是同心扣。但你要的话，就拿着。”',
+        opts: [
+            { l: '接过结扣', r: '「……拿到了就别还了。还了我也不会收。」' },
+            { l: '问他下次烟火还去吗', r: '「……去。但下次不跑了。……大概。」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">他 没 说 出 口 的 东 西</div>
+                <button class="gold-btn" id="openPriv">看 看 他 藏 了 什 么</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「……看可以。别笑。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「这些东西……没什么好看的。真的。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('他站在门口，手里攥着那个结扣。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边角画了一颗棋子。旁边写着：“我的。”';
+        else if (tapN === 10) note.innerText = '“再点，我就让你一子。就一子。”';
+        else if (tapN === 15) note.innerText = '“……行。你赢了。结扣给你。别还。”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>

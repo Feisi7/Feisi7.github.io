@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>G-HOST · 柯恩的幻境账本</title>
+<style>
+    :root {
+        --bg-base: #100a14;
+        --bg-card: #18101e;
+        --bg-elevated: #201628;
+        --rose: #a84a7a;
+        --rose-bright: #d47aa8;
+        --violet: #7a5aa8;
+        --violet-bright: #a888d4;
+        --gold: #c8a060;
+        --gold-bright: #e8c888;
+        --text-main: #e4dce8;
+        --text-dim: #8a7a94;
+        --border-dim: #2a2032;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: "Songti SC", "STSong", "SimSun", Georgia, serif; background-color: var(--bg-base); color: var(--text-main); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+
+    body::before {
+        content: '';
+        position: fixed; inset: 0; pointer-events: none; z-index: -1;
+        background-image:
+            radial-gradient(900px 600px at 50% -10%, rgba(168,74,122,0.10), transparent 70%),
+            radial-gradient(700px 500px at 110% 105%, rgba(122,90,168,0.08), transparent 70%),
+            radial-gradient(400px 400px at 20% 60%, rgba(200,160,96,0.04), transparent 70%);
+    }
+
+    /* ============ 验证入口 ============ */
+    #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border-dim); padding: 28px 22px; border-radius: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); position: relative; }
+    .gate-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--rose), var(--gold), var(--violet), transparent); }
+    .gate-box::after { content: 'G-HOST · 幻境存档'; position: absolute; bottom: 8px; right: 12px; font-size: 9px; color: var(--rose); letter-spacing: 2px; }
+
+    .seal-logo { width: 66px; height: 66px; margin: 0 auto 14px; border: 1.5px solid var(--rose); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 24px rgba(168,74,122,0.2); background: var(--bg-elevated); position: relative; }
+    .seal-logo::after { content: ''; position: absolute; inset: 4px; border: 1px dashed rgba(168,74,122,0.3); border-radius: 50%; }
+    .seal-logo span { color: var(--rose-bright); font-family: Georgia, serif; }
+    .gate-title { text-align: center; font-size: 13px; color: var(--text-dim); letter-spacing: 4px; margin-bottom: 24px; }
+
+    .gq { font-size: 13px; color: var(--rose); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .gq::before { content: '✧'; font-size: 15px; color: var(--gold); }
+    .gtext { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.9; }
+    .gtext b { color: var(--text-main); font-weight: normal; }
+
+    .gopts { display: flex; flex-direction: column; gap: 9px; }
+    .gbtn { background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 12px 15px; text-align: left; border-radius: 4px; transition: all 0.2s; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .gbtn:active { background: rgba(168,74,122,0.1); border-color: var(--rose); color: var(--rose-bright); }
+
+    .gnote { margin-top: 14px; font-size: 12px; color: var(--gold); line-height: 1.85; min-height: 20px; }
+
+    .handwrite { font-size: 15px; color: var(--rose-bright); line-height: 2; padding: 16px; border-left: 2px solid var(--rose); background: rgba(168,74,122,0.05); margin: 18px 0; opacity: 0; transform: translateY(10px); transition: all 0.6s ease; }
+    .handwrite.show { opacity: 1; transform: none; }
+
+    .stamp { display: inline-block; border: 2px solid var(--gold); color: var(--gold); padding: 5px 15px; font-size: 13px; font-weight: bold; letter-spacing: 2px; transform: rotate(-2deg); margin-bottom: 18px; opacity: 0; }
+    .stamp.show { opacity: 1; animation: stampIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    @keyframes stampIn { 0% { transform: rotate(-10deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+
+    .enter-btn { width: 100%; background: transparent; border: 1px solid var(--rose); color: var(--rose); padding: 12px; font-size: 15px; letter-spacing: 5px; border-radius: 4px; margin-top: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+    .enter-btn.show { opacity: 1; pointer-events: auto; }
+    .enter-btn:active { background: rgba(168,74,122,0.1); }
+
+    /* ============ 主体 ============ */
+    #app { display: none; max-width: 540px; margin: 0 auto; padding: 0 15px 50px; opacity: 0; transition: opacity 0.5s ease; }
+    #app.show { opacity: 1; }
+
+    .header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; background: rgba(16,10,20,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); margin-bottom: 15px; }
+    .h-left { display: flex; align-items: center; gap: 11px; }
+    .h-seal { width: 34px; height: 34px; border: 1px solid var(--rose); color: var(--rose); display: flex; align-items: center; justify-content: center; font-size: 16px; border-radius: 50%; background: var(--bg-elevated); }
+    .h-title { font-size: 14px; color: var(--text-main); letter-spacing: 1px; }
+    .h-sub { font-size: 11px; color: var(--gold); letter-spacing: 0.5px; }
+    .pill { border: 1px solid var(--border-dim); padding: 5px 12px; border-radius: 20px; font-size: 11px; color: var(--text-dim); transition: 0.2s; background: var(--bg-card); }
+    .pill.on { border-color: var(--rose); color: var(--rose); background: rgba(168,74,122,0.08); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 4px; padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--rose), var(--gold), var(--violet), transparent); opacity: 0.5; }
+    .card-title { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-dim), transparent); }
+
+    .total-num { font-size: 31px; color: var(--rose-bright); font-family: Georgia, serif; text-shadow: 0 0 20px rgba(168,74,122,0.3); cursor: pointer; word-break: break-all; transition: text-shadow 0.2s; }
+    .total-num:active { text-shadow: 0 0 32px rgba(212,122,168,0.8); }
+    .total-meta { font-size: 12px; color: var(--gold); margin-top: 5px; }
+    .total-note { font-size: 12px; color: var(--violet-bright); margin-top: 10px; min-height: 18px; line-height: 1.7; }
+
+    .chart-row { margin-bottom: 10px; }
+    .chart-row:last-child { margin-bottom: 0; }
+    .chart-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-val { color: var(--rose-bright); font-family: Georgia, serif; }
+    .chart-track { height: 5px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
+    .chart-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--violet), var(--rose), var(--gold)); transition: width 0.1s linear; border-radius: 3px; }
+
+    .asset-cat { margin-bottom: 4px; }
+    .cat-head { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-dim); color: var(--rose); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .cat-val { color: var(--rose-bright); font-family: Georgia, serif; font-weight: normal; }
+    .asset-item { padding: 10px 0; border-bottom: 1px dashed var(--border-dim); }
+    .asset-item:last-child { border-bottom: none; }
+    .ai-top { display: flex; justify-content: space-between; font-size: 14px; gap: 10px; }
+    .ai-top span:first-child { flex: 1; }
+    .ai-val { color: var(--rose-bright); font-family: Georgia, serif; white-space: nowrap; }
+    .ai-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.7; }
+
+    /* 私密空间 */
+    .priv-locked { text-align: center; padding: 15px 0; }
+    .lock-text { font-size: 13px; color: var(--text-dim); margin-bottom: 15px; letter-spacing: 2px; }
+    .gold-btn { border: 1px solid var(--rose); color: var(--rose); padding: 8px 24px; border-radius: 4px; font-size: 13px; letter-spacing: 2px; transition: 0.2s; background: var(--bg-card); }
+    .gold-btn:active { background: rgba(168,74,122,0.1); }
+
+    .priv-note { font-size: 12px; color: var(--text-dim); padding-bottom: 10px; border-bottom: 1px dashed var(--border-dim); margin-bottom: 10px; line-height: 1.7; }
+    .pitem { border-bottom: 1px dashed var(--border-dim); }
+    .pitem:last-child { border-bottom: none; }
+    .pitem-head { width: 100%; text-align: left; padding: 12px 0; font-size: 14px; display: flex; justify-content: space-between; transition: color 0.2s; gap: 10px; }
+    .pitem-head span:first-child { flex: 1; }
+    .pitem-head:active { color: var(--rose); }
+    .pitem-head::before { content: '✧'; margin-right: 8px; font-size: 13px; color: var(--gold); }
+    .pitem-body { padding-bottom: 15px; display: none; }
+    .pitem.open .pitem-body { display: block; animation: fadeIn 0.3s ease; }
+    .pstory { font-size: 13px; color: var(--text-main); line-height: 1.85; padding-left: 12px; border-left: 2px solid var(--violet); margin-bottom: 12px; }
+    .popt { display: block; width: 100%; text-align: left; background: var(--bg-elevated); border: 1px solid var(--border-dim); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 4px; transition: 0.2s; line-height: 1.6; }
+    .popt:active { border-color: var(--rose); color: var(--rose-bright); }
+    .pres { font-size: 13px; color: var(--gold-bright); padding: 11px 12px; border: 1px solid rgba(200,160,96,0.3); background: rgba(200,160,96,0.04); border-radius: 4px; animation: fadeIn 0.3s ease; line-height: 1.75; }
+
+    /* 消息浮层 */
+    #msg-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 15px calc(15px + env(safe-area-inset-bottom)); z-index: 100; pointer-events: none; display: none; }
+    .msg-card { background: var(--bg-elevated); border: 1px solid var(--rose); border-radius: 4px; padding: 15px; box-shadow: 0 -5px 30px rgba(0,0,0,0.85); pointer-events: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.3,1.1) both; max-width: 540px; margin: 0 auto; }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .msg-from { font-size: 11px; color: var(--rose); margin-bottom: 6px; letter-spacing: 2px; }
+    .msg-text { font-size: 14px; color: var(--text-main); margin-bottom: 12px; padding-right: 20px; line-height: 1.75; }
+    .msg-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .msg-btn { background: var(--bg-base); border: 1px solid var(--border-dim); padding: 6px 12px; font-size: 12px; color: var(--text-dim); border-radius: 4px; transition: 0.2s; }
+    .msg-btn:active { border-color: var(--rose); color: var(--rose-bright); }
+    .msg-x { position: absolute; top: 10px; right: 10px; font-size: 18px; color: var(--text-dim); padding: 5px; transition: color 0.2s; }
+    .msg-x:active { color: var(--rose); }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-elevated); border: 1px solid var(--rose); color: var(--rose-bright); padding: 9px 16px; border-radius: 4px; font-size: 13px; z-index: 200; opacity: 0; transition: 0.3s; pointer-events: none; text-align: center; max-width: 90vw; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- 验证入口 -->
+<div id="gate">
+    <div class="gate-box">
+        <div class="seal-logo"><span>C</span></div>
+        <div class="gate-title">G - H O S T · 柯 恩 的 幻 境 账 本</div>
+        <div id="gateStep"></div>
+        <div class="gnote" style="text-align: center; margin-top: 18px;">每次出现，都有玫瑰花瓣</div>
+    </div>
+</div>
+
+<!-- 主体 -->
+<div id="app">
+    <div class="header">
+        <div class="h-left">
+            <div class="h-seal">✧</div>
+            <div>
+                <div class="h-title">柯恩的幻境账本</div>
+                <div class="h-sub" id="permLabel">权限：超出想象的人</div>
+            </div>
+        </div>
+        <button class="pill" id="pauseBtn">暂停消息</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">全部幻境</div>
+        <div class="total-num" id="totalNum">0</div>
+        <div class="total-meta" id="rateInfo">每秒进项 +0</div>
+        <div class="total-note" id="totalNote"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">幻境配比</div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">明细</div>
+        <div id="assetList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">不在账本上的东西</div>
+        <div id="privBody"></div>
+    </div>
+</div>
+
+<!-- 消息浮层 -->
+<div id="msg-wrap">
+    <div class="msg-card">
+        <button class="msg-x" id="msgX">×</button>
+        <div class="msg-from">柯 恩</div>
+        <div class="msg-text" id="msgText"></div>
+        <div class="msg-opts" id="msgOpts"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    const fmt = (n) => Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    /* ================= 数据配置 ================= */
+    const DATA = [
+        {
+            cat: '幻境 · 造梦估值',
+            short: '造梦估值',
+            items: [
+                { n: '幻境造梦的能力估值', b: 0, r: 0, note: '一响指建起，一响指消散。虚假的创世主。' },
+                { n: '视觉幻境覆盖范围估值', b: 0, r: 0, note: '目光所及之处完全脱离现实。ERA也分辨不出。' },
+                { n: '出现频率与不可预测性溢价', b: 0, r: 0, note: '地点与时间毫无规律。唯一规律是靠近启示馆。' }
+            ]
+        },
+        {
+            cat: '残次品 · 回收清单',
+            short: '残次品回收',
+            items: [
+                { n: '已回收残次品（176件）', b: 176, r: 0, note: '油画、小说、未改良的鲜花种子、雕塑、易拉罐玩具……每一件都有名字。' },
+                { n: '残次品的“价值”', b: 0, r: 0, note: '在000城被判定为残次品。但在我这里，它们才是真的。' }
+            ]
+        },
+        {
+            cat: '柯恩 · 个人持有',
+            short: '个人持有',
+            items: [
+                { n: '玫瑰花瓣消耗量（每次出现）', b: 0, r: 0, note: '每次出现，都有玫瑰花瓣。有人觉得过于喜欢玫瑰花了。' },
+                { n: '魔术道具与戏服', b: 8600, r: 2, note: '自称Coin。名字是假的，但戏法是真的。' },
+                { n: '易拉罐制的小玩具', b: 0, r: 0, note: '第176件残次品。我自己做的。' }
+            ]
+        },
+        {
+            cat: '你 · 超出想象',
+            short: '超出想象',
+            items: [
+                { n: '唯独你，超出我的想象', b: 0, r: 0, note: '我造过无数幻境。但你是唯一一个，我没设计过的。' }
+            ]
+        }
+    ];
+
+    let T0 = 0;
+    let updateTimer = null;
+
+    /* ================= 入口验证 ================= */
+    let gateStep = 0;
+    const gateEl = document.getElementById('gateStep');
+
+    function renderGate() {
+        if (gateStep === 0) {
+            gateEl.innerHTML = `
+                <div class="gq">壹 · 来者何人</div>
+                <div class="gtext">玫瑰花瓣落了一地。他站在幻境中央，打了个响指。<br><b>你相信完美吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">相 信，完 美 是 最 好 的</button>
+                    <button class="gbtn" data-v="no">不 信，完 美 太 假 了</button>
+                    <button class="gbtn" data-v="you">我 只 信 你 造 的 幻 境</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'you') {
+                        document.getElementById('gNote').innerText = "他愣了一下，然后笑了。响指没打，幻境却自己散了。\n「……你可真会说话。进来吧。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2600);
+                    } else if (btn.dataset.v === 'no') {
+                        document.getElementById('gNote').innerText = "「哦？那我们是一边的。完美太假了，我同意。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2000);
+                    } else {
+                        document.getElementById('gNote').innerText = "「相信完美啊……那你可能会失望。不过没关系，我有幻境。」";
+                        setTimeout(() => { gateStep = 1; renderGate(); }, 2000);
+                    }
+                };
+            });
+        } else if (gateStep === 1) {
+            gateEl.innerHTML = `
+                <div class="gq">贰 · 残次品校验</div>
+                <div class="gtext">他从000城带走了176件被判定为“残次品”的东西。<br><b>他为什么带走它们？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="a">因为便宜，可以倒卖</button>
+                    <button class="gbtn" data-v="b">因为疯了，在回收废品而已</button>
+                    <button class="gbtn" data-v="c">因为在“完美”的世界里，它们才是真的</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelectorAll('.gbtn').forEach(btn => {
+                btn.onclick = () => {
+                    if (btn.dataset.v === 'c') {
+                        gateStep = 2; renderGate();
+                    } else if (btn.dataset.v === 'b') {
+                        document.getElementById('gNote').innerText = "「……有人是这么说的。不过，随便吧。」";
+                        setTimeout(() => { gateStep = 2; renderGate(); }, 1800);
+                    } else {
+                        document.getElementById('gNote').innerText = "「倒卖？我可是魔术师，不是二手商贩。」";
+                    }
+                };
+            });
+        } else if (gateStep === 2) {
+            gateEl.innerHTML = `
+                <div class="gq">叁 · 确认</div>
+                <div class="gtext">账本里有176件残次品、玫瑰花瓣、一响指建起的幻境。<br><b>你确定要看吗？</b></div>
+                <div class="gopts">
+                    <button class="gbtn" data-v="yes">看 吧，我 不 怕 假 的</button>
+                </div>
+                <div class="gnote" id="gNote"></div>
+            `;
+            gateEl.querySelector('.gbtn').onclick = () => {
+                document.getElementById('gNote').innerText = "「那进来吧。别踩到花瓣。……踩到也没关系，反正会再长出来。」";
+                setTimeout(() => { gateStep = 3; renderGate(); }, 1600);
+            };
+        } else {
+            gateEl.innerHTML = `
+                <div class="gq">肆 · 柯恩的话</div>
+                <div class="handwrite" id="hw">「一响指建起，一响指消散。<br>我是虚假的创世主，<br>我摒弃了真实，<br>在幻境中拥抱着我认可的真实。<br><br>我最想制造一个独属于你的幻境，<br>把星河都点燃给你，<br>让花海都绽放给你……<br><br>——唯独你，<br>超出我的想象。」</div>
+                <div id="stampBox"></div>
+            `;
+            setTimeout(() => { document.getElementById('hw').classList.add('show'); }, 500);
+            setTimeout(() => {
+                document.getElementById('stampBox').innerHTML = `
+                    <div class="stamp show">权限已变更：超出想象</div>
+                    <button class="enter-btn show" id="enterBtn">翻 开 账 本</button>
+                `;
+                document.getElementById('enterBtn').onclick = enterApp;
+            }, 3000);
+        }
+    }
+
+    /* ================= 进入主体 ================= */
+    function enterApp() {
+        document.getElementById('gate').style.display = 'none';
+        const app = document.getElementById('app');
+        app.style.display = 'block';
+        setTimeout(() => app.classList.add('show'), 50);
+
+        T0 = performance.now();
+        buildAssets();
+        buildChart();
+        updateAll();
+
+        if (updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateAll, 100);
+
+        scheduleMsg(7000);
+    }
+
+    /* ================= 资产系统 ================= */
+    function buildAssets() {
+        const wrap = document.getElementById('assetList');
+        let html = '';
+        DATA.forEach((c, ci) => {
+            html += `<div class="asset-cat">
+                <div class="cat-head"><span>${c.cat}</span><span class="cat-val" id="c_${ci}">—</span></div>`;
+            c.items.forEach((it, ii) => {
+                html += `<div class="asset-item">
+                    <div class="ai-top"><span>${it.n}</span><span class="ai-val" id="v_${ci}_${ii}">—</span></div>
+                    <div class="ai-note">${it.note}</div>
+                </div>`;
+            });
+            html += '</div>';
+        });
+        wrap.innerHTML = html;
+    }
+
+    function buildChart() {
+        const el = document.getElementById('chart');
+        let html = '';
+        DATA.forEach((c, i) => {
+            html += `<div class="chart-row">
+                <div class="chart-top"><span>${c.short}</span><span class="chart-val" id="chv_${i}">—</span></div>
+                <div class="chart-track"><div class="chart-fill" id="bar_${i}"></div></div>
+            </div>`;
+        });
+        el.innerHTML = html;
+
+        let rate = 0;
+        DATA.forEach(c => c.items.forEach(it => rate += it.r));
+        document.getElementById('rateInfo').innerText = `每秒进项 +${fmt(rate)}`;
+    }
+
+    function updateAll() {
+        const e = (performance.now() - T0) / 1000;
+        let catVals = [];
+        let total = 0;
+
+        DATA.forEach((c, ci) => {
+            let s = 0;
+            c.items.forEach((it, ii) => {
+                let v = it.b + it.r * e;
+                s += v;
+                const node = document.getElementById(`v_${ci}_${ii}`);
+                if (node) {
+                    if (it.b === 0 && it.r === 0) {
+                        node.innerText = it.note.includes('超出我的想象') ? '超出想象' : (it.b === 0 ? '无法计价' : '—');
+                    } else {
+                        node.innerText = fmt(v);
+                    }
+                }
+            });
+            catVals.push(s);
+            total += s;
+            const cn = document.getElementById(`c_${ci}`);
+            if (cn) cn.innerText = (s === 0) ? '—' : fmt(s);
+        });
+
+        document.getElementById('totalNum').innerText = fmt(total);
+
+        const max = Math.max(...catVals, 1);
+        catVals.forEach((v, i) => {
+            const bar = document.getElementById(`bar_${i}`);
+            if (bar) bar.style.width = (v <= 0 ? 0 : Math.max(1, (v / max) * 100)) + '%';
+            const cv = document.getElementById(`chv_${i}`);
+            if (cv) cv.innerText = (v <= 0) ? '无价' : fmt(v);
+        });
+    }
+
+    /* ================= 消息系统 ================= */
+    const MSGS = [
+        { t: '看到176件残次品那栏了吗。它们每一件都有名字。000城觉得它们是废品，但我觉得……它们才是真的。', o: [
+            { l: '那它们现在在哪', r: '「在我的幻境里。每一件都有自己的位置。你想看吗？」' },
+            { l: '我也觉得它们是真的', r: '「……我就知道你会懂。所以我才让你进来。」' }
+        ]},
+        { t: '每次出现都有玫瑰花瓣。有人觉得我太喜欢玫瑰花了。你觉得呢。', o: [
+            { l: '是有点多', r: '「多吗？我还能再多一点。」' },
+            { l: '玫瑰配你，刚好', r: '「……这话我爱听。下次多给你撒一点。」' }
+        ]},
+        { t: '他们说我是一个疯子在回收废品。我不在乎。反正他们的完美世界，我也不想进去。', o: [
+            { l: '那你想要什么世界', r: '「光怪陆离的。每个人都各有不同的。真诚的。肆意的。……有你的。」' },
+            { l: '我也不想进完美世界', r: '「那我们就是同伙了。走，我带你去个地方。」' }
+        ]},
+        { t: '我造过无数幻境。每一个都很完美。但唯独你……超出我的想象。', o: [
+            { l: '哪里超出了', r: '「哪里都超出了。我设计不出来。所以，你是真的。」' },
+            { l: '那你不用造了', r: '「嗯。不用造了。你在的地方，就是幻境。」' }
+        ]}
+    ];
+
+    let msgIdx = 0, msgTimer = null, msgOpen = false, msgPaused = false;
+
+    function scheduleMsg(delay) {
+        clearTimeout(msgTimer);
+        if (msgPaused) return;
+        msgTimer = setTimeout(() => {
+            if (msgPaused || msgOpen) return;
+            showMsg();
+        }, delay || 15000);
+    }
+
+    function showMsg() {
+        const m = MSGS[msgIdx % MSGS.length];
+        msgIdx++;
+        msgOpen = true;
+        document.getElementById('msgText').innerText = m.t;
+        const opts = document.getElementById('msgOpts');
+        opts.innerHTML = '';
+
+        m.o.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'msg-btn';
+            b.innerText = o.l;
+            b.onclick = () => {
+                opts.innerHTML = `<div class="pres">${o.r}</div>`;
+                setTimeout(closeMsg, 3200);
+            };
+            opts.appendChild(b);
+        });
+
+        document.getElementById('msg-wrap').style.display = 'block';
+    }
+
+    function closeMsg() {
+        const scrollPos = window.scrollY;
+        document.getElementById('msg-wrap').style.display = 'none';
+        msgOpen = false;
+        window.scrollTo(0, scrollPos);
+        scheduleMsg(15000);
+    }
+
+    document.getElementById('msgX').onclick = closeMsg;
+
+    document.getElementById('pauseBtn').onclick = function() {
+        msgPaused = !msgPaused;
+        this.innerText = msgPaused ? '恢复消息' : '暂停消息';
+        this.classList.toggle('on', msgPaused);
+        if (msgPaused) clearTimeout(msgTimer);
+        else if (!msgOpen) scheduleMsg(3000);
+    };
+
+    /* ================= 不在账本上的东西 ================= */
+    const PRIV = [
+        { id: 'petal', name: '一片压平的玫瑰花瓣', story: '夹在账本里。紫色的，边缘有点干了，但颜色还在。', opts: [
+            { l: '问他为什么留着', r: '「因为那天的幻境，是我最喜欢的一个。」' },
+            { l: '说花瓣很漂亮', r: '「喜欢？下次给你带一捧。紫色的，带刺的。」' }
+        ]},
+        { id: 'toy', name: '第176件残次品的照片', story: '一个易拉罐做的小玩具。他自己做的。照片背面写着：“最后一件，留给自己。”', opts: [
+            { l: '问他为什么留给自己', r: '「因为它是第176件。刚好凑整。……而且做得挺丑的。」' },
+            { l: '说想看看实物', r: '「……行。但别笑。它真的挺丑的。」' }
+        ]},
+        { id: 'halfword', name: '某次消失前留下的半句话', story: '终端上只有一行字：“下次，我带你去看……”然后就没了。', opts: [
+            { l: '问他后半句是什么', r: '「……去看启示馆后面的那片野花。没人打理，但开得很好。」' },
+            { l: '说下次一起去', r: '「好。说定了。下次不消失，等你。」' }
+        ]},
+        { id: 'hesitation', name: '他打响指前那个犹豫的瞬间', story: '手抬起来了，又停了一下。然后才打下去。', opts: [
+            { l: '问他为什么犹豫', r: '「因为那次幻境里……有你。我怕你不喜欢。」' },
+            { l: '说很喜欢', r: '「真的？那我不犹豫了。以后都给你造。」' }
+        ]}
+    ];
+
+    const EGG = {
+        id: 'dream',
+        name: '他为你单独造的幻境',
+        story: '紫色玫瑰铺路，漫天花瓣。星河在头顶点燃，花海在脚下绽放。他站在中间，手心向上：“这个幻境，没给别人看过。”',
+        opts: [
+            { l: '走进幻境', r: '「……欢迎。这是独属于你的。我也是。」' },
+            { l: '问他为什么单独造', r: '「因为唯独你，超出我的想象。所以想给你一个，超出想象的幻境。」' }
+        ]
+    };
+
+    let privState = {};
+    PRIV.forEach(p => privState[p.id] = { open: false, chosen: null });
+    let privOpened = false, eggUnlocked = false;
+
+    function renderPriv() {
+        const body = document.getElementById('privBody');
+        if (!privOpened) {
+            body.innerHTML = `<div class="priv-locked">
+                <div class="lock-text">不 在 账 本 上 的 东 西</div>
+                <button class="gold-btn" id="openPriv">看 看 他 藏 了 什 么</button>
+            </div>`;
+            document.getElementById('openPriv').onclick = () => {
+                privOpened = true;
+                renderPriv();
+                toast('「这些东西……没写进账本。因为它们是给一个人的。」');
+            };
+            return;
+        }
+
+        const list = PRIV.slice();
+        if (eggUnlocked) list.push(EGG);
+
+        let html = `<div class="priv-note">「账本上的东西都是可以算的。这些……不算。」</div>`;
+        list.forEach(p => {
+            const st = privState[p.id] || (privState[p.id] = { open: false, chosen: null });
+            html += `<div class="pitem ${st.open ? 'open' : ''}">
+                <button class="pitem-head" data-act="toggle" data-id="${p.id}">
+                    <span>${p.name}</span><span>${st.open ? '−' : '+'}</span>
+                </button>`;
+            if (st.open) {
+                html += `<div class="pitem-body">
+                    <div class="pstory">${p.story}</div>`;
+                if (st.chosen === null) {
+                    p.opts.forEach((o, oi) => {
+                        html += `<button class="popt" data-act="opt" data-id="${p.id}" data-oi="${oi}">${o.l}</button>`;
+                    });
+                } else {
+                    html += `<div class="pres">${p.opts[st.chosen].r}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('privBody').onclick = (e) => {
+        const t = e.target.closest('[data-act]');
+        if (!t) return;
+        const id = t.dataset.id;
+        const st = privState[id];
+        if (!st) return;
+
+        if (t.dataset.act === 'toggle') {
+            st.open = !st.open;
+            renderPriv();
+        } else if (t.dataset.act === 'opt') {
+            st.chosen = parseInt(t.dataset.oi, 10);
+            renderPriv();
+            checkEgg();
+        }
+    };
+
+    function checkEgg() {
+        if (eggUnlocked) return;
+        const allDone = PRIV.every(p => privState[p.id] && privState[p.id].chosen !== null);
+        if (!allDone) return;
+        eggUnlocked = true;
+        setTimeout(() => {
+            renderPriv();
+            toast('他打了个响指。眼前突然开满了紫色的玫瑰。');
+        }, 1000);
+    }
+
+    /* ================= 彩蛋与反馈 ================= */
+    let tapN = 0;
+    document.getElementById('totalNum').onclick = () => {
+        tapN++;
+        const note = document.getElementById('totalNote');
+        if (tapN === 5) note.innerText = '账本边角画了一朵玫瑰。紫色的，带刺的。';
+        else if (tapN === 10) note.innerText = '“再点，我就给你造个幻境，让你数不完。”';
+        else if (tapN === 15) note.innerText = '“行。你赢了。想要什么幻境，直接说。……我从不拒绝你。”';
+    };
+
+    let toastTimer;
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // 启动验证
+    renderGate();
+
+})();
+</script>
+</body>
+</html>
